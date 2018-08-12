@@ -164,7 +164,8 @@ static struct PluginMenuItem* createMenuItem(enum PluginMenuType type, int id, c
 
 enum {
 	MENU_ID_GLOBAL_1 = 1,
-	MENU_ID_GLOBAL_2,
+	MENU_ID_GLOBAL_2 = 2,
+	MENU_ID_GLOBAL_3,
 	MENU_ID_MAX
 };
 
@@ -172,7 +173,8 @@ void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
 
 	BEGIN_CREATE_MENUS(MENU_ID_MAX - 1); //Needs to be correct
 	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_1, "Enable/Disable", "");
-	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_1, "Enable/Disable Name Changing", "");
+	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_2, "Enable/Disable Name Changing", "");
+	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_3, "Enable/Disable Input Muting", "");
 	END_CREATE_MENUS;
 
 	*menuIcon = (char*)malloc(PLUGIN_MENU_BUFSZ * sizeof(char));
@@ -204,26 +206,33 @@ void ToggleFakeMuter()
 	message += " Fake Muter.";
 	ts3Functions.printMessageToCurrentTab(message.c_str());
 
-	if (!config->changeName)
-		return;
-
 	uint64 schid = ts3Functions.getCurrentServerConnectionHandlerID();
-	anyID clientID = 0;
-	ts3Functions.getClientID(schid, &clientID);
-	char* name = new char[256];
-	ts3Functions.getClientSelfVariableAsString(schid, CLIENT_NICKNAME, &name);
+	if (config->muteMicrophone)
+	{
+		ts3Functions.setClientSelfVariableAsInt(schid, CLIENT_INPUT_MUTED, config->enabled);
+	}
 
-	std::string sName(name);
-	if (config->enabled)
+	if (config->changeName)
 	{
-		ts3Functions.setClientSelfVariableAsString(schid, CLIENT_NICKNAME, (sName + " [MUTED]").c_str());
+		anyID clientID = 0;
+		ts3Functions.getClientID(schid, &clientID);
+		char* name = new char[256];
+		ts3Functions.getClientSelfVariableAsString(schid, CLIENT_NICKNAME, &name);
+
+		std::string sName(name);
+		if (config->enabled)
+		{
+			ts3Functions.setClientSelfVariableAsString(schid, CLIENT_NICKNAME, (sName + " [MUTED]").c_str());
+		}
+		else
+		{
+			std::string newName = sName.substr(0, sName.size() - 8);
+			ts3Functions.setClientSelfVariableAsString(schid, CLIENT_NICKNAME, newName.c_str());
+		}
 	}
-	else
-	{
-		std::string newName = sName.substr(0, sName.size() - 8);
-		ts3Functions.setClientSelfVariableAsString(schid, CLIENT_NICKNAME, newName.c_str());
-	}
-	ts3Functions.flushClientSelfUpdates(schid, NULL);
+
+	if (config->muteMicrophone || config->changeName)
+		ts3Functions.flushClientSelfUpdates(schid, NULL);
 }
 /************************** TeamSpeak callbacks ***************************/
 void ts3plugin_onMenuItemEvent(uint64 serverConnectionHandlerID, enum PluginMenuType type, int menuItemID, uint64 selectedItemID) {
@@ -235,8 +244,21 @@ void ts3plugin_onMenuItemEvent(uint64 serverConnectionHandlerID, enum PluginMenu
 			ToggleFakeMuter();
 			break;
 		case MENU_ID_GLOBAL_2:
+		{
 			config->changeName = !config->changeName;
+			std::string message = config->changeName ? "Enabled" : "Disabled";
+			message += " Name Change.";
+			ts3Functions.printMessageToCurrentTab(message.c_str());
 			break;
+		}
+		case MENU_ID_GLOBAL_3:
+		{
+			config->muteMicrophone = !config->muteMicrophone;
+			std::string message = config->muteMicrophone ? "Enabled" : "Disabled";
+			message += " Input Muting.";
+			ts3Functions.printMessageToCurrentTab(message.c_str());
+			break;
+		}
 		default:
 			break;
 		}
