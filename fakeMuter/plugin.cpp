@@ -166,6 +166,7 @@ enum {
 	MENU_ID_GLOBAL_1 = 1,
 	MENU_ID_GLOBAL_2 = 2,
 	MENU_ID_GLOBAL_3,
+	MENU_ID_GLOBAL_4,
 	MENU_ID_MAX
 };
 
@@ -175,6 +176,7 @@ void ts3plugin_initMenus(struct PluginMenuItem*** menuItems, char** menuIcon) {
 	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_1, "Enable/Disable", "");
 	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_2, "Enable/Disable Name Changing", "");
 	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_3, "Enable/Disable Input Muting", "");
+	CREATE_MENU_ITEM(PLUGIN_MENU_TYPE_GLOBAL, MENU_ID_GLOBAL_4, "Enable/Disable Away Status", "");
 	END_CREATE_MENUS;
 
 	*menuIcon = (char*)malloc(PLUGIN_MENU_BUFSZ * sizeof(char));
@@ -212,6 +214,11 @@ void ToggleFakeMuter()
 		ts3Functions.setClientSelfVariableAsInt(schid, CLIENT_INPUT_MUTED, config->enabled);
 	}
 
+	if (config->setAway)
+	{
+		ts3Functions.setClientSelfVariableAsInt(schid, CLIENT_AWAY, config->enabled);
+	}
+
 	if (config->changeName)
 	{
 		anyID clientID = 0;
@@ -231,7 +238,7 @@ void ToggleFakeMuter()
 		}
 	}
 
-	if (config->muteMicrophone || config->changeName)
+	if (config->muteMicrophone || config->changeName || config->setAway)
 		ts3Functions.flushClientSelfUpdates(schid, NULL);
 }
 /************************** TeamSpeak callbacks ***************************/
@@ -256,6 +263,14 @@ void ts3plugin_onMenuItemEvent(uint64 serverConnectionHandlerID, enum PluginMenu
 			config->muteMicrophone = !config->muteMicrophone;
 			std::string message = config->muteMicrophone ? "Enabled" : "Disabled";
 			message += " Input Muting.";
+			ts3Functions.printMessageToCurrentTab(message.c_str());
+			break;
+		}
+		case MENU_ID_GLOBAL_4:
+		{
+			config->setAway = !config->setAway;
+			std::string message = config->setAway ? "Enabled" : "Disabled";
+			message += " Away Status.";
 			ts3Functions.printMessageToCurrentTab(message.c_str());
 			break;
 		}

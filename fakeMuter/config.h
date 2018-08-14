@@ -9,6 +9,7 @@ public:
 	bool enabled = false;
 	bool changeName = true;
 	bool muteMicrophone = true;
+	bool setAway = false;
 };
 
 extern Config* config;
